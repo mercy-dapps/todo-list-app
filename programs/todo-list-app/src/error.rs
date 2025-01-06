@@ -1,7 +1,7 @@
-use anchor_lang::prelude::error_code;
+use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum TodoListError {
-    #[msg("The title is too long")]
-    TextTooLong,
+pub enum TodoError {
+    #[msg("Todo title too long")]
+    TitleTooLong,
 }
