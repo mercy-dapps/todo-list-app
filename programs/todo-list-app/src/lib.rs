@@ -26,6 +26,10 @@ pub mod todo_list_app {
         _update_task(ctx, _todo_id)
     }
 
+    pub fn edit_task(ctx: Context<EditTask>, _todo_id: u8, new_title: String) -> Result<()> {
+        _edit_task(ctx, _todo_id, new_title)
+    }
+
     pub fn delete_task(ctx: Context<DeleteTask>, _todo_id: u8) -> Result<()> {
         _delete_task(ctx, _todo_id)
     }

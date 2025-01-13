@@ -6,7 +6,7 @@ pub fn _add_task(ctx: Context<AddTask>, title: String) -> Result<()> {
     let user = &mut ctx.accounts.user;
     let task = &mut ctx.accounts.task;
 
-    require!(title.chars().count() > 200, TodoError::TitleTooLong);
+    require!(title.chars().count() <= 200, TodoError::TitleTooLong);
 
     task.author = ctx.accounts.author.key();
     task.todo_id = user.last_todo;
@@ -20,7 +20,6 @@ pub fn _add_task(ctx: Context<AddTask>, title: String) -> Result<()> {
 }
 
 #[derive(Accounts)]
-#[instruction()]
 pub struct AddTask<'info> {
     #[account(
         mut,
@@ -34,7 +33,7 @@ pub struct AddTask<'info> {
         init,
         payer = author,
         space = Task::INIT_SPACE,
-        seeds = [TASK_TAG, author.key().as_ref(), &user.last_todo.to_le_bytes()],
+        seeds = [TASK_TAG, author.key().as_ref()],
         bump
     )]
     pub task: Account<'info, Task>,

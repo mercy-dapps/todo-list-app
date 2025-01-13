@@ -4,4 +4,6 @@ use anchor_lang::prelude::*;
 pub enum TodoError {
     #[msg("Todo title too long")]
     TitleTooLong,
+    #[msg("Unauthorized access.")]
+    Unauthorized,
 }

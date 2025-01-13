@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
 
 #[account]
+#[derive(Debug)]
 #[derive(InitSpace)]
 pub struct Task {
     pub author: Pubkey,
-    pub  completed: bool,
+    pub completed: bool,
     pub todo_id: u8,
     #[max_len(200)]
     pub  title: String,
