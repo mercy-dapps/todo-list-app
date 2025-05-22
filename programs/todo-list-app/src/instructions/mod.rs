@@ -1,14 +1,14 @@
 pub mod initialize_user;
 pub use initialize_user::*;
 
-pub mod add_task;
-pub use add_task::*;
+pub mod add_todo;
+pub use add_todo::*;
 
-pub mod update_task;
-pub use update_task::*;
+pub mod update_todo;
+pub use update_todo::*;
 
-pub mod edit_task;
-pub use edit_task::*;
+pub mod edit_todo;
+pub use edit_todo::*;
 
-pub mod delete_task;
-pub use delete_task::*;
+pub mod delete_todo;
+pub use delete_todo::*;

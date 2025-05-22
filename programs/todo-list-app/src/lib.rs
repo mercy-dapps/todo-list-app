@@ -15,23 +15,23 @@ pub mod todo_list_app {
     use super::*;
 
     pub fn initialize_user(ctx: Context<InitializeUser>) -> Result<()> {
-        _initialize_user(ctx)
+        ctx.accounts.initialize_user(&ctx.bumps)
     }
 
-    pub fn add_task(ctx: Context<AddTask>, title: String) -> Result<()> {
-        _add_task(ctx, title)
+    pub fn add_todo(ctx: Context<AddTodo>, todo_id: u8, title: String ) -> Result<()> {
+        ctx.accounts.add_todo(todo_id, title, &ctx.bumps)
     }
 
-    pub fn update_task(ctx: Context<UpdateTask>, _todo_id: u8) -> Result<()> {
-        _update_task(ctx, _todo_id)
+    pub fn update_todo(ctx: Context<UpdateTodo>, todo_id: u8) -> Result<()> {
+        ctx.accounts.update_todo(todo_id)
     }
 
-    pub fn edit_task(ctx: Context<EditTask>, _todo_id: u8, new_title: String) -> Result<()> {
-        _edit_task(ctx, _todo_id, new_title)
+    pub fn edit_todo(ctx: Context<EditTodo>, todo_id: u8, new_title: String) -> Result<()> {
+        ctx.accounts.edit_todo(todo_id, new_title)
     }
 
-    pub fn delete_task(ctx: Context<DeleteTask>, _todo_id: u8) -> Result<()> {
-        _delete_task(ctx, _todo_id)
+    pub fn delete_todo(ctx: Context<DeleteTodo>, todo_id: u8) -> Result<()> {
+        ctx.accounts.delete_todo(todo_id)
     }
 
 }

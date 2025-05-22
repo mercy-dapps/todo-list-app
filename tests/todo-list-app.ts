@@ -2,6 +2,14 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { TodoListApp } from "../target/types/todo_list_app";
 import { assert } from "chai";
+import { BN } from "bn.js";
+import { randomBytes } from "crypto";
+import {
+  Keypair,
+  LAMPORTS_PER_SOL,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 
 describe("todo-list-app", () => {
   // Configure the client to use the local cluster.
@@ -9,189 +17,174 @@ describe("todo-list-app", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
+  const connection = provider.connection;
+
   const program = anchor.workspace.TodoListApp as Program<TodoListApp>;
 
-  let todoId;
+  const todo_id = randomBytes(8)[0];
+  const todo2_id = randomBytes(8)[0];
+
+  const author = Keypair.generate();
+
+  const user = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("user"), author.publicKey.toBuffer()],
+    program.programId
+  )[0];
+
+  const todo = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("todo"), author.publicKey.toBuffer(), Buffer.from([todo_id])],
+    program.programId
+  )[0];
+
+  const todo_2 = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("todo"), author.publicKey.toBuffer(), Buffer.from([todo2_id])],
+    program.programId
+  )[0];
+
+  console.log(todo);
+
+  const accounts = {
+    user,
+    todo,
+    author: author.publicKey,
+  };
+
+  const confirm = async (signature: string): Promise<string> => {
+    const block = await connection.getLatestBlockhash();
+
+    await connection.confirmTransaction({
+      signature,
+      ...block,
+    });
+
+    return signature;
+  };
+
+  const log = async (signature: string): Promise<string> => {
+    console.log(
+      `Your transaction signature: https://explorer.solana.com/transaction/${signature}?cluster=custom&customUrl=${connection.rpcEndpoint}`
+    );
+
+    return signature;
+  };
+
+  it("airdrop", async () => {
+    let tx = new Transaction();
+    tx.instructions = [
+      SystemProgram.transfer({
+        fromPubkey: provider.publicKey,
+        toPubkey: author.publicKey,
+        lamports: 10 * LAMPORTS_PER_SOL,
+      }),
+    ];
+
+    await provider.sendAndConfirm(tx).then(log);
+  });
 
   it("initialize user!", async () => {
-
-    const [userPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('user'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    )
-
     const tx = await program.methods
       .initializeUser()
-      .accountsPartial({
-        user: userPda,
-        author: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
+      .accounts({ ...accounts })
+      .signers([author])
+      .rpc()
+      .then(confirm)
+      .then(log);
 
     console.log("Your transaction signature", tx);
 
-    const userAccount = await program.account.user.fetch(userPda);
+    const userAccount = await program.account.user.fetch(user);
     console.log(userAccount);
 
-    assert.equal(userAccount.author.toBase58(), provider.wallet.publicKey.toBase58());
+    assert.equal(userAccount.author.toBase58(), author.publicKey.toBase58());
     assert.equal(userAccount.todoCount, 0);
-    assert.equal(userAccount.lastTodo, 0);
   });
 
-  it("create task!", async () => {
+  it("create todo!", async () => {
+    await program.methods
+      .addTodo(todo_id, "complete my todolist testing and deploy")
+      .accounts({ ...accounts })
+      .signers([author])
+      .rpc()
+      .then(confirm)
+      .then(log);
 
-    const [userPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('user'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    );
-
-    const state = await program.account.user.fetch(userPda)
-      todoId = state.lastTodo;
-
-    const [taskPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('task'),
-        provider.wallet.publicKey.toBuffer(),
-      ],
-      program.programId
-    );
-
-    const tx = await program.methods
-      .addTask("complete my todolist testing and deploy")
-      .accountsPartial({
-        user: userPda,
-        task: taskPda,
-        author: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+    await program.methods
+      .addTodo(todo2_id, "start working on the ui")
+      .accounts({
+        todo: todo_2,
+        author: author.publicKey,
       })
+      .signers([author])
+      .rpc()
+      .then(confirm)
+      .then(log);
+
+    const todoAccount = await program.account.todo.fetch(todo);
+    console.log(todoAccount);
+
+    assert.equal(todoAccount.author.toBase58(), author.publicKey.toBase58());
+    assert.equal(todoAccount.title, "complete my todolist testing and deploy");
+    assert.equal(todoAccount.completed, false);
+  });
+
+  it("update todo!", async () => {
+    const tx = await program.methods
+      .updateTodo(todo_id)
+      .accounts({ ...accounts })
+      .signers([author])
       .rpc();
 
     console.log("Your transaction signature", tx);
 
-    const taskAccount = await program.account.task.fetch(taskPda);
-    console.log(taskAccount);
+    const todoAccount = await program.account.todo.fetch(todo);
+    console.log(todoAccount);
 
-    assert.equal(taskAccount.author.toBase58(), provider.wallet.publicKey.toBase58());
-    assert.equal(taskAccount.title, "complete my todolist testing and deploy");
-    assert.equal(taskAccount.completed, false);
+    assert.equal(todoAccount.author.toBase58(), author.publicKey.toBase58());
+    assert.equal(todoAccount.title, "complete my todolist testing and deploy");
+    assert.equal(todoAccount.completed, true);
   });
 
-  it("update task!", async () => {
-
-    const [userPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('user'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    );
-
-    const [taskPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('task'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    );
-
+  it("edit todo!", async () => {
     const tx = await program.methods
-      .updateTask(todoId)
-      .accountsPartial({
-        user: userPda,
-        task: taskPda,
-        author: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
+      .editTodo(todo_id, "continuing my todolist testing and deploy")
+      .accounts({ ...accounts })
+      .signers([author])
       .rpc();
 
     console.log("Your transaction signature", tx);
 
-    const taskAccount = await program.account.task.fetch(taskPda);
-    console.log(taskAccount);
+    const todoAccount = await program.account.todo.fetch(todo);
+    console.log(todoAccount);
 
-    assert.equal(taskAccount.author.toBase58(), provider.wallet.publicKey.toBase58());
-    assert.equal(taskAccount.title, "complete my todolist testing and deploy");
-    assert.equal(taskAccount.completed, true);
-  });
-
-  it("edit task!", async () => {
-
-    const [userPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('user'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
+    assert.equal(todoAccount.author.toBase58(), author.publicKey.toBase58());
+    assert.equal(
+      todoAccount.title,
+      "continuing my todolist testing and deploy"
     );
+    assert.equal(todoAccount.completed, true);
 
-    const [taskPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('task'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    );
-
-    const tx = await program.methods
-      .editTask(todoId, "continuing my todolist testing and deploy")
-      .accountsPartial({
-        user: userPda,
-        task: taskPda,
-        author: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
-      .rpc();
-
-    console.log("Your transaction signature", tx);
-
-    const taskAccount = await program.account.task.fetch(taskPda);
-    console.log(taskAccount);
-
-    assert.equal(taskAccount.author.toBase58(), provider.wallet.publicKey.toBase58());
-    assert.equal(taskAccount.title, "continuing my todolist testing and deploy");
-    assert.equal(taskAccount.completed, true);
-
-    const userState = await program.account.user.fetch(userPda);
-    const taskState = await program.account.task.fetch(taskPda);
+    const userState = await program.account.user.fetch(user);
+    const todoState = await program.account.todo.fetch(todo);
 
     console.log(userState);
-    console.log(taskState);     
+    console.log(todoState);
   });
 
-  it("delete task!", async () => {
-
-    const [userPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('user'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    );
-
-    const [taskPda] = anchor.web3.PublicKey.findProgramAddressSync(
-      [Buffer.from('task'),
-        provider.wallet.publicKey.toBuffer()
-      ],
-      program.programId
-    );
-
+  it("delete todo!", async () => {
     const tx = await program.methods
-      .deleteTask(todoId)
-      .accountsPartial({
-        user: userPda,
-        task: taskPda,
-        author: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-      })
+      .deleteTodo(todo_id)
+      .accounts({ ...accounts })
+      .signers([author])
       .rpc();
 
     console.log("Your transaction signature", tx);
 
-    const taskAccount = await program.account.task.all();
-    console.log("Your task", taskAccount);
+    const todoAccount = await program.account.todo.all();
+    console.log("Your todo", todoAccount);
 
-    assert.equal(taskAccount.length, 0);
+    assert.equal(todoAccount.length, 1);
 
-    const userState = await program.account.user.fetch(userPda);
+    const userState = await program.account.user.fetch(user);
 
     console.log(userState);
   });

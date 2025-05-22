@@ -6,4 +6,6 @@ pub enum TodoError {
     TitleTooLong,
     #[msg("Unauthorized access.")]
     Unauthorized,
+    #[msg("Invalid todo selected")]
+    InvalidTodo,
 }
