@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 
 use crate::instructions::*;
 
-declare_id!("4anCuMniXh6YLNBajw1Mwypf82eRtwqdPB5RnVBwwoLR");
+declare_id!("CYVmbKB1b1tUTxvCoVU5w4id8bBUt5SsEByaUDytAcvn");
 
 #[program]
 pub mod todo_list_app {

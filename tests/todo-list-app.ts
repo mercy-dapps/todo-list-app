@@ -2,7 +2,6 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { TodoListApp } from "../target/types/todo_list_app";
 import { assert } from "chai";
-import { BN } from "bn.js";
 import { randomBytes } from "crypto";
 import {
   Keypair,
@@ -12,8 +11,6 @@ import {
 } from "@solana/web3.js";
 
 describe("todo-list-app", () => {
-  // Configure the client to use the local cluster.
-
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
@@ -40,8 +37,6 @@ describe("todo-list-app", () => {
     [Buffer.from("todo"), author.publicKey.toBuffer(), Buffer.from([todo2_id])],
     program.programId
   )[0];
-
-  console.log(todo);
 
   const accounts = {
     user,
@@ -74,7 +69,7 @@ describe("todo-list-app", () => {
       SystemProgram.transfer({
         fromPubkey: provider.publicKey,
         toPubkey: author.publicKey,
-        lamports: 10 * LAMPORTS_PER_SOL,
+        lamports: 1 * LAMPORTS_PER_SOL,
       }),
     ];
 
